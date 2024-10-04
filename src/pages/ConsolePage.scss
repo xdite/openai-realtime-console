@@ -277,4 +277,11 @@
       }
     }
   }
+
+  .content-block.debug-console {
+    .content-block-body {
+      max-height: 300px; // 或者您想要的任何高度
+      overflow-y: auto;
+    }
+  }
 }

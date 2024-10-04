@@ -112,7 +112,6 @@ export function ConsolePage() {
   }>({});
   const [isConnected, setIsConnected] = useState(false);
   const [canPushToTalk, setCanPushToTalk] = useState(true);
-  const [memoryKv, setMemoryKv] = useState<{ [key: string]: any }>({});
   const [coords, setCoords] = useState<Coordinates | null>({
     lat: 37.775593,
     lng: -122.418137,
@@ -191,7 +190,6 @@ export function ConsolePage() {
     setIsConnected(false);
     setRealtimeEvents([]);
     setItems([]);
-    setMemoryKv({});
     setCoords({
       lat: 37.775593,
       lng: -122.418137,
@@ -278,36 +276,7 @@ export function ConsolePage() {
     // Set transcription, otherwise we don't get user transcriptions back
     client.updateSession({ input_audio_transcription: { model: 'whisper-1' } });
 
-    // Add tools
-    client.addTool(
-      {
-        name: 'set_memory',
-        description: 'Saves important data about the user into memory.',
-        parameters: {
-          type: 'object',
-          properties: {
-            key: {
-              type: 'string',
-              description:
-                'The key of the memory value. Always use lowercase and underscores, no other characters.',
-            },
-            value: {
-              type: 'string',
-              description: 'Value can be anything represented as a string',
-            },
-          },
-          required: ['key', 'value'],
-        },
-      },
-      async ({ key, value }: { [key: string]: any }) => {
-        setMemoryKv((memoryKv) => {
-          const newKv = { ...memoryKv };
-          newKv[key] = value;
-          return newKv;
-        });
-        return { ok: true };
-      }
-    );
+    // 保留 get_weather 工具
     client.addTool(
       {
         name: 'get_weather',
@@ -418,72 +387,6 @@ export function ConsolePage() {
       </div>
       <div className="content-main">
         <div className="content-logs">
-          <div className="content-block events">
-            <div className="content-block-title">events</div>
-            <div className="content-block-body" ref={eventsScrollRef}>
-              {!realtimeEvents.length && `awaiting connection...`}
-              {realtimeEvents.map((realtimeEvent, i) => {
-                const count = realtimeEvent.count;
-                const event = { ...realtimeEvent.event };
-                if (event.type === 'input_audio_buffer.append') {
-                  event.audio = `[trimmed: ${event.audio.length} bytes]`;
-                } else if (event.type === 'response.audio.delta') {
-                  event.delta = `[trimmed: ${event.delta.length} bytes]`;
-                }
-                return (
-                  <div className="event" key={event.event_id}>
-                    <div className="event-timestamp">
-                      {formatTime(realtimeEvent.time)}
-                    </div>
-                    <div className="event-details">
-                      <div
-                        className="event-summary"
-                        onClick={() => {
-                          // toggle event details
-                          const id = event.event_id;
-                          const expanded = { ...expandedEvents };
-                          if (expanded[id]) {
-                            delete expanded[id];
-                          } else {
-                            expanded[id] = true;
-                          }
-                          setExpandedEvents(expanded);
-                        }}
-                      >
-                        <div
-                          className={`event-source ${
-                            event.type === 'error'
-                              ? 'error'
-                              : realtimeEvent.source
-                          }`}
-                        >
-                          {realtimeEvent.source === 'client' ? (
-                            <ArrowUp />
-                          ) : (
-                            <ArrowDown />
-                          )}
-                          <span>
-                            {event.type === 'error'
-                              ? 'error!'
-                              : realtimeEvent.source}
-                          </span>
-                        </div>
-                        <div className="event-type">
-                          {event.type}
-                          {count && ` (${count})`}
-                        </div>
-                      </div>
-                      {!!expandedEvents[event.event_id] && (
-                        <div className="event-payload">
-                          {JSON.stringify(event, null, 2)}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
           <div className="content-block conversation">
             <div className="content-block-title">conversation</div>
             <div className="content-block-body" data-conversation-content>
@@ -600,10 +503,42 @@ export function ConsolePage() {
               )}
             </div>
           </div>
-          <div className="content-block kv">
-            <div className="content-block-title">set_memory()</div>
-            <div className="content-block-body content-kv">
-              {JSON.stringify(memoryKv, null, 2)}
+          <div className="content-block debug-console">
+            <div className="content-block-title">Debug Console</div>
+            <div className="content-block-body content-debug">
+              {realtimeEvents.map((realtimeEvent, i) => {
+                const count = realtimeEvent.count;
+                const event = { ...realtimeEvent.event };
+                if (event.type === 'input_audio_buffer.append') {
+                  event.audio = `[trimmed: ${event.audio.length} bytes]`;
+                } else if (event.type === 'response.audio.delta') {
+                  event.delta = `[trimmed: ${event.delta.length} bytes]`;
+                }
+                return (
+                  <div className="event" key={event.event_id}>
+                    <div className="event-timestamp">
+                      {formatTime(realtimeEvent.time)}
+                    </div>
+                    <div className="event-details">
+                      <div className="event-summary">
+                        <div className={`event-source ${event.type === 'error' ? 'error' : realtimeEvent.source}`}>
+                          {realtimeEvent.source === 'client' ? <ArrowUp /> : <ArrowDown />}
+                          <span>{event.type === 'error' ? 'error!' : realtimeEvent.source}</span>
+                        </div>
+                        <div className="event-type">
+                          {event.type}
+                          {count && ` (${count})`}
+                        </div>
+                      </div>
+                      {!!expandedEvents[event.event_id] && (
+                        <div className="event-payload">
+                          {JSON.stringify(event, null, 2)}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
