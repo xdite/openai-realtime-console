@@ -105,9 +105,9 @@ function writeString(view: DataView, offset: number, string: string) {
 // 在 ConsolePage 函數外部定義這個對象
 const SYSTEM_INSTRUCTIONS = {
   default: instructions, // 使用之前定義的默認指令
-  creative: "You are a creative assistant. Your responses should be imaginative and original.",
-  professional: "You are a professional assistant. Your responses should be formal and business-oriented.",
-  friendly: "You are a friendly assistant. Your responses should be casual and approachable.",
+  chinese: "把我輸入的內容，用中文念出來。不需要對話模式，每一句話都是單句朗讀。",
+  japanese: "把我輸入的內容，用日文念出來。不需要對話模式，每一句話都是單句朗讀。",
+  english: "把我輸入的內容，用美式英語念出來。不需要對話模式，每一句話都是單句朗讀。",
   custom: "" // 添加這行
 };
 
@@ -182,8 +182,9 @@ export function ConsolePage() {
   /**
    * Added state variables for system instruction
    */
-  const [systemInstructionKey, setSystemInstructionKey] = useState<keyof typeof SYSTEM_INSTRUCTIONS>('default');
-  const [customSystemInstruction, setCustomSystemInstruction] = useState('');
+  const [selectedInstruction, setSelectedInstruction] = useState<keyof typeof SYSTEM_INSTRUCTIONS>('default');
+  const [currentInstruction, setCurrentInstruction] = useState(SYSTEM_INSTRUCTIONS.default);
+  const [isCustom, setIsCustom] = useState(false);
 
   /**
    * Utility for formatting the timing of logs
@@ -337,10 +338,7 @@ export function ConsolePage() {
     const wavStreamPlayer = wavStreamPlayerRef.current;
 
     // Set instructions
-    const instruction = systemInstructionKey === 'custom' 
-      ? customSystemInstruction 
-      : SYSTEM_INSTRUCTIONS[systemInstructionKey];
-    client.updateSession({ instructions: instruction });
+    client.updateSession({ instructions: currentInstruction });
 
     // Set transcription, otherwise we don't get user transcriptions back
     client.updateSession({ input_audio_transcription: { model: 'whisper-1' } });
@@ -455,25 +453,43 @@ export function ConsolePage() {
       // cleanup; resets to defaults
       client.reset();
     };
-  }, [systemInstructionKey, customSystemInstruction]);
+  }, [currentInstruction]);
 
   /**
    * Update system instruction
    */
-  const updateSystemInstruction = useCallback(() => {
+  const updateSystemInstruction = useCallback((newInstruction: string) => {
     const client = clientRef.current;
-    const instruction = systemInstructionKey === 'custom' 
-      ? customSystemInstruction 
-      : SYSTEM_INSTRUCTIONS[systemInstructionKey];
     if (isConnected) {
-      client.updateSession({ instructions: instruction });
+      client.updateSession({ instructions: newInstruction });
     }
-  }, [systemInstructionKey, customSystemInstruction, isConnected]);
+    // 即使未連接，也更新本地狀態
+    setCurrentInstruction(newInstruction);
+    console.log('System instruction updated:', newInstruction);
+  }, [isConnected]);
 
-  // 在 useEffect 中添加這個監聽器
-  useEffect(() => {
-    updateSystemInstruction();
-  }, [systemInstructionKey, customSystemInstruction, updateSystemInstruction]);
+  const handleInstructionChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value as keyof typeof SYSTEM_INSTRUCTIONS;
+    setSelectedInstruction(value);
+    let newInstruction: string;
+    if (value === 'custom') {
+      setIsCustom(true);
+      newInstruction = currentInstruction; // 保持當前的自定義指令
+    } else {
+      setIsCustom(false);
+      newInstruction = SYSTEM_INSTRUCTIONS[value];
+    }
+    setCurrentInstruction(newInstruction);
+    // 自動更新系統指令
+    updateSystemInstruction(newInstruction);
+  };
+
+  const handleCustomInstructionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newInstruction = e.target.value;
+    setCurrentInstruction(newInstruction);
+    // 自動更新系統指令
+    updateSystemInstruction(newInstruction);
+  };
 
   /**
    * Render the application
@@ -586,8 +602,8 @@ export function ConsolePage() {
             <div className="content-block-title">System Instruction</div>
             <div className="content-block-body">
               <select 
-                value={systemInstructionKey}
-                onChange={(e) => setSystemInstructionKey(e.target.value as keyof typeof SYSTEM_INSTRUCTIONS)}
+                value={selectedInstruction}
+                onChange={handleInstructionChange}
               >
                 {Object.keys(SYSTEM_INSTRUCTIONS).map((key) => (
                   <option key={key} value={key}>
@@ -596,20 +612,10 @@ export function ConsolePage() {
                 ))}
                 <option value="custom">Custom</option>
               </select>
-              {systemInstructionKey === 'custom' && (
-                <textarea
-                  value={customSystemInstruction}
-                  onChange={(e) => setCustomSystemInstruction(e.target.value)}
-                  placeholder="Enter custom system instruction here..."
-                />
-              )}
-              {/* 添加一個顯示當前系統指令的文本區域 */}
               <textarea
-                value={systemInstructionKey === 'custom' 
-                  ? customSystemInstruction 
-                  : SYSTEM_INSTRUCTIONS[systemInstructionKey]}
-                readOnly
-                placeholder="Current system instruction"
+                value={currentInstruction}
+                onChange={handleCustomInstructionChange}
+                placeholder={isCustom ? "Enter custom system instruction here..." : "Current system instruction (editable)"}
               />
             </div>
           </div>
