@@ -460,20 +460,6 @@ export function ConsolePage() {
               })}
             </div>
           </div>
-          <div className="content-actions">
-            <input
-              type="text"
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              placeholder="Type your message..."
-              disabled={!isConnected}
-            />
-            <Button
-              label="Send"
-              onClick={sendTextMessage}
-              disabled={!isConnected || !inputText.trim()}
-            />
-          </div>
         </div>
         <div className="content-right">
           <div className="content-block map">
@@ -540,6 +526,22 @@ export function ConsolePage() {
               })}
             </div>
           </div>
+        </div>
+      </div>
+      <div className="content-bottom">
+        <div className="content-actions">
+          <input
+            type="text"
+            value={inputText}
+            onChange={(e) => setInputText(e.target.value)}
+            placeholder="Type your message..."
+            disabled={!isConnected}
+          />
+          <Button
+            label="Send"
+            onClick={sendTextMessage}
+            disabled={!isConnected || !inputText.trim()}
+          />
         </div>
       </div>
     </div>
