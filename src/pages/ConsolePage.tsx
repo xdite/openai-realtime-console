@@ -104,11 +104,10 @@ function writeString(view: DataView, offset: number, string: string) {
 
 // 在 ConsolePage 函數外部定義這個對象
 const SYSTEM_INSTRUCTIONS = {
-  default: instructions, // 使用之前定義的默認指令
+  demo: instructions, // 使用之前定義的默認指令
   chinese: "把我輸入的內容，用中文念出來。不需要對話模式，每一句話都是單句朗讀。",
   japanese: "把我輸入的內容，用日文念出來。不需要對話模式，每一句話都是單句朗讀。",
   english: "把我輸入的內容，用美式英語念出來。不需要對話模式，每一句話都是單句朗讀。",
-  custom: "" // 添加這行
 };
 
 export function ConsolePage() {
@@ -182,9 +181,8 @@ export function ConsolePage() {
   /**
    * Added state variables for system instruction
    */
-  const [selectedInstruction, setSelectedInstruction] = useState<keyof typeof SYSTEM_INSTRUCTIONS>('default');
-  const [currentInstruction, setCurrentInstruction] = useState(SYSTEM_INSTRUCTIONS.default);
-  const [isCustom, setIsCustom] = useState(false);
+  const [selectedInstruction, setSelectedInstruction] = useState<keyof typeof SYSTEM_INSTRUCTIONS>('chinese');
+  const [currentInstruction, setCurrentInstruction] = useState(SYSTEM_INSTRUCTIONS.chinese);
 
   /**
    * Utility for formatting the timing of logs
@@ -409,18 +407,18 @@ export function ConsolePage() {
       }
       if (item.status === 'completed' && item.formatted.audio?.length) {
         console.log('Received audio data:', item.formatted.audio.length, 'bytes');
-        
+
         // 將接收到的音頻數據轉換為 Int16Array
         const pcmData = new Int16Array(item.formatted.audio.buffer);
-        
+
         // 將 PCM 數據轉換為 WAV
         const wavBlob = pcmToWav(pcmData, 24000); // 假設採樣率為 24000
-        
+
         const audioSrc = URL.createObjectURL(wavBlob);
-        
+
         item.formatted.file = { url: audioSrc };
         console.log('Created audio WAV URL');
-        
+
         // 嘗試預加載音頻
         const audio = new Audio(audioSrc);
         audio.addEventListener('canplaythrough', () => {
@@ -471,23 +469,14 @@ export function ConsolePage() {
   const handleInstructionChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value as keyof typeof SYSTEM_INSTRUCTIONS;
     setSelectedInstruction(value);
-    let newInstruction: string;
-    if (value === 'custom') {
-      setIsCustom(true);
-      newInstruction = currentInstruction; // 保持當前的自定義指令
-    } else {
-      setIsCustom(false);
-      newInstruction = SYSTEM_INSTRUCTIONS[value];
-    }
+    const newInstruction = SYSTEM_INSTRUCTIONS[value];
     setCurrentInstruction(newInstruction);
-    // 自動更新系統指令
     updateSystemInstruction(newInstruction);
   };
 
   const handleCustomInstructionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newInstruction = e.target.value;
     setCurrentInstruction(newInstruction);
-    // 自動更新系統指令
     updateSystemInstruction(newInstruction);
   };
 
@@ -601,7 +590,7 @@ export function ConsolePage() {
           <div className="content-block system-instruction">
             <div className="content-block-title">System Instruction</div>
             <div className="content-block-body">
-              <select 
+              <select
                 value={selectedInstruction}
                 onChange={handleInstructionChange}
               >
@@ -610,12 +599,11 @@ export function ConsolePage() {
                     {key.charAt(0).toUpperCase() + key.slice(1)}
                   </option>
                 ))}
-                <option value="custom">Custom</option>
               </select>
               <textarea
                 value={currentInstruction}
                 onChange={handleCustomInstructionChange}
-                placeholder={isCustom ? "Enter custom system instruction here..." : "Current system instruction (editable)"}
+                placeholder="Current system instruction (editable)"
               />
             </div>
           </div>
