@@ -113,6 +113,14 @@
           flex-direction: column;
           gap: 10px;
 
+          select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background-color: white;
+          }
+
           textarea {
             width: 100%;
             min-height: 100px;

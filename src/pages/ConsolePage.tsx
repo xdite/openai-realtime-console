@@ -100,6 +100,17 @@ function writeString(view: DataView, offset: number, string: string) {
   }
 }
 
+
+
+// 在 ConsolePage 函數外部定義這個對象
+const SYSTEM_INSTRUCTIONS = {
+  default: instructions, // 使用之前定義的默認指令
+  creative: "You are a creative assistant. Your responses should be imaginative and original.",
+  professional: "You are a professional assistant. Your responses should be formal and business-oriented.",
+  friendly: "You are a friendly assistant. Your responses should be casual and approachable.",
+  custom: "" // 添加這行
+};
+
 export function ConsolePage() {
   /**
    * Ask user for API Key
@@ -169,9 +180,10 @@ export function ConsolePage() {
   const [inputText, setInputText] = useState('');
 
   /**
-   * Added state variable for system instruction
+   * Added state variables for system instruction
    */
-  const [systemInstruction, setSystemInstruction] = useState(instructions);
+  const [systemInstructionKey, setSystemInstructionKey] = useState<keyof typeof SYSTEM_INSTRUCTIONS>('default');
+  const [customSystemInstruction, setCustomSystemInstruction] = useState('');
 
   /**
    * Utility for formatting the timing of logs
@@ -325,7 +337,11 @@ export function ConsolePage() {
     const wavStreamPlayer = wavStreamPlayerRef.current;
 
     // Set instructions
-    client.updateSession({ instructions: systemInstruction });
+    const instruction = systemInstructionKey === 'custom' 
+      ? customSystemInstruction 
+      : SYSTEM_INSTRUCTIONS[systemInstructionKey];
+    client.updateSession({ instructions: instruction });
+
     // Set transcription, otherwise we don't get user transcriptions back
     client.updateSession({ input_audio_transcription: { model: 'whisper-1' } });
 
@@ -414,6 +430,9 @@ export function ConsolePage() {
         });
         audio.addEventListener('error', (e) => {
           console.error('Audio preload error:', e);
+          const audioElement = e.target as HTMLAudioElement;
+          console.log('Audio error code:', audioElement.error?.code);
+          console.log('Audio error message:', audioElement.error?.message);
         });
         audio.load();
       }
@@ -436,15 +455,25 @@ export function ConsolePage() {
       // cleanup; resets to defaults
       client.reset();
     };
-  }, [systemInstruction]);
+  }, [systemInstructionKey, customSystemInstruction]);
 
   /**
    * Update system instruction
    */
   const updateSystemInstruction = useCallback(() => {
     const client = clientRef.current;
-    client.updateSession({ instructions: systemInstruction });
-  }, [systemInstruction]);
+    const instruction = systemInstructionKey === 'custom' 
+      ? customSystemInstruction 
+      : SYSTEM_INSTRUCTIONS[systemInstructionKey];
+    if (isConnected) {
+      client.updateSession({ instructions: instruction });
+    }
+  }, [systemInstructionKey, customSystemInstruction, isConnected]);
+
+  // 在 useEffect 中添加這個監聽器
+  useEffect(() => {
+    updateSystemInstruction();
+  }, [systemInstructionKey, customSystemInstruction, updateSystemInstruction]);
 
   /**
    * Render the application
@@ -556,15 +585,31 @@ export function ConsolePage() {
           <div className="content-block system-instruction">
             <div className="content-block-title">System Instruction</div>
             <div className="content-block-body">
+              <select 
+                value={systemInstructionKey}
+                onChange={(e) => setSystemInstructionKey(e.target.value as keyof typeof SYSTEM_INSTRUCTIONS)}
+              >
+                {Object.keys(SYSTEM_INSTRUCTIONS).map((key) => (
+                  <option key={key} value={key}>
+                    {key.charAt(0).toUpperCase() + key.slice(1)}
+                  </option>
+                ))}
+                <option value="custom">Custom</option>
+              </select>
+              {systemInstructionKey === 'custom' && (
+                <textarea
+                  value={customSystemInstruction}
+                  onChange={(e) => setCustomSystemInstruction(e.target.value)}
+                  placeholder="Enter custom system instruction here..."
+                />
+              )}
+              {/* 添加一個顯示當前系統指令的文本區域 */}
               <textarea
-                value={systemInstruction}
-                onChange={(e) => setSystemInstruction(e.target.value)}
-                placeholder="Enter system instruction here..."
-              />
-              <Button
-                label="Update"
-                onClick={updateSystemInstruction}
-                disabled={!isConnected}
+                value={systemInstructionKey === 'custom' 
+                  ? customSystemInstruction 
+                  : SYSTEM_INSTRUCTIONS[systemInstructionKey]}
+                readOnly
+                placeholder="Current system instruction"
               />
             </div>
           </div>
