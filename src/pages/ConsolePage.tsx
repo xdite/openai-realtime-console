@@ -25,6 +25,9 @@ import { Map } from '../components/Map';
 
 import './ConsolePage.scss';
 
+// 恢復之前移除的導入
+import { WavStreamPlayer } from '../lib/wavtools/index.js';
+
 /**
  * Type for result from get_weather() function call
  */
@@ -79,6 +82,11 @@ export function ConsolePage() {
             dangerouslyAllowAPIKeyInBrowser: true,
           }
     )
+  );
+
+  // 在 clientRef 定義之後添加這行
+  const wavStreamPlayerRef = useRef<WavStreamPlayer>(
+    new WavStreamPlayer({ sampleRate: 24000 })
   );
 
   /**
@@ -155,14 +163,18 @@ export function ConsolePage() {
    */
   const connectConversation = useCallback(async () => {
     const client = clientRef.current;
+    const wavStreamPlayer = wavStreamPlayerRef.current;
 
-    // Set state variables
+    // 設置狀態變量
     startTimeRef.current = new Date().toISOString();
     setIsConnected(true);
     setRealtimeEvents([]);
     setItems(client.conversation.getItems());
 
-    // Connect to realtime API
+    // 連接到音頻輸出
+    await wavStreamPlayer.connect();
+
+    // 連接到實時 API
     await client.connect();
     client.sendUserMessageContent([
       {
@@ -187,7 +199,9 @@ export function ConsolePage() {
     setMarker(null);
 
     const client = clientRef.current;
+    const wavStreamPlayer = wavStreamPlayerRef.current;
     client.disconnect();
+    await wavStreamPlayer.interrupt();
   }, []);
 
   const deleteConversationItem = useCallback(async (id: string) => {
@@ -257,6 +271,7 @@ export function ConsolePage() {
   useEffect(() => {
     // Get refs
     const client = clientRef.current;
+    const wavStreamPlayer = wavStreamPlayerRef.current;
 
     // Set instructions
     client.updateSession({ instructions: instructions });
@@ -353,7 +368,22 @@ export function ConsolePage() {
     client.on('error', (event: any) => console.error(event));
     client.on('conversation.updated', async ({ item, delta }: any) => {
       const items = client.conversation.getItems();
+      if (delta?.audio) {
+        wavStreamPlayer.add16BitPCM(delta.audio, item.id);
+      }
+      if (item.status === 'completed' && item.formatted.audio?.length) {
+        const blob = new Blob([item.formatted.audio], { type: 'audio/mp3' });
+        const url = URL.createObjectURL(blob);
+        item.formatted.file = { url };
+      }
       setItems(items);
+    });
+    client.on('conversation.interrupted', async () => {
+      const trackSampleOffset = await wavStreamPlayer.interrupt();
+      if (trackSampleOffset?.trackId) {
+        const { trackId, offset } = trackSampleOffset;
+        await client.cancelResponse(trackId, offset);
+      }
     });
 
     setItems(client.conversation.getItems());
