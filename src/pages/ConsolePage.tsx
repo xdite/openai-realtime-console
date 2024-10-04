@@ -383,6 +383,15 @@ export function ConsolePage() {
               onClick={() => resetAPIKey()}
             />
           )}
+          <Button
+            label={isConnected ? 'disconnect' : 'connect'}
+            iconPosition={isConnected ? 'end' : 'start'}
+            icon={isConnected ? X : Zap}
+            buttonStyle={isConnected ? 'regular' : 'action'}
+            onClick={
+              isConnected ? disconnectConversation : connectConversation
+            }
+          />
         </div>
       </div>
       <div className="content-main">
@@ -463,16 +472,6 @@ export function ConsolePage() {
               label="Send"
               onClick={sendTextMessage}
               disabled={!isConnected || !inputText.trim()}
-            />
-            <div className="spacer" />
-            <Button
-              label={isConnected ? 'disconnect' : 'connect'}
-              iconPosition={isConnected ? 'end' : 'start'}
-              icon={isConnected ? X : Zap}
-              buttonStyle={isConnected ? 'regular' : 'action'}
-              onClick={
-                isConnected ? disconnectConversation : connectConversation
-              }
             />
           </div>
         </div>
