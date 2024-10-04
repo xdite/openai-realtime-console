@@ -222,27 +222,36 @@ export function ConsolePage() {
    * WavRecorder taks speech input, WavStreamPlayer output, client is API client
    */
   const connectConversation = useCallback(async () => {
+    if (isConnected) return; // 如果已經連接，則不執行任何操作
+
     const client = clientRef.current;
     const wavStreamPlayer = wavStreamPlayerRef.current;
 
-    // 設置狀態變量
-    startTimeRef.current = new Date().toISOString();
-    setIsConnected(true);
-    setRealtimeEvents([]);
-    setItems(client.conversation.getItems());
+    try {
+      // 設置狀態變量
+      startTimeRef.current = new Date().toISOString();
+      setIsConnected(true);
+      setRealtimeEvents([]);
+      setItems(client.conversation.getItems());
 
-    // 連接到音頻輸出
-    await wavStreamPlayer.connect();
+      // 連接到音頻輸出
+      await wavStreamPlayer.connect();
 
-    // 連接到實時 API
-    await client.connect();
-    client.sendUserMessageContent([
-      {
-        type: `input_text`,
-        text: `Hello!`,
-      },
-    ]);
-  }, []);
+      // 連接到實時 API
+      await client.connect();
+      client.sendUserMessageContent([
+        {
+          type: `input_text`,
+          text: `Hello!`,
+        },
+      ]);
+
+      console.log('Connected successfully');
+    } catch (error) {
+      console.error('Connection failed:', error);
+      setIsConnected(false);
+    }
+  }, [isConnected]);
 
   /**
    * Disconnect and reset conversation state
@@ -480,6 +489,16 @@ export function ConsolePage() {
     updateSystemInstruction(newInstruction);
   };
 
+  // 添加一個 ref 來引用輸入框
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // 添加一個處理輸入框點擊/聚焦的函數
+  const handleInputInteraction = useCallback(() => {
+    if (!isConnected) {
+      connectConversation();
+    }
+  }, [isConnected, connectConversation]);
+
   /**
    * Render the application
    */
@@ -650,6 +669,7 @@ export function ConsolePage() {
       <div className="content-bottom">
         <div className="content-actions">
           <input
+            ref={inputRef}
             type="text"
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
@@ -659,8 +679,10 @@ export function ConsolePage() {
                 sendTextMessage();
               }
             }}
+            onClick={handleInputInteraction}
+            onFocus={handleInputInteraction}
             placeholder="Type your message..."
-            disabled={!isConnected}
+            // 移除 disabled 屬性
           />
           <Button
             label="Send"
