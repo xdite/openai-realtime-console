@@ -26,7 +26,7 @@ import { Map } from '../components/Map';
 import './ConsolePage.scss';
 
 // 恢復之前移除的導入
-import { WavStreamPlayer } from '../lib/wavtools/index.js';
+import { WavStreamPlayer, WavRecorder } from '../lib/wavtools/index.js';
 
 /**
  * Type for result from get_weather() function call
@@ -53,6 +53,51 @@ interface RealtimeEvent {
   source: 'client' | 'server';
   count?: number;
   event: { [key: string]: any };
+}
+
+// 添加這個輔助函數來將 ArrayBuffer 轉換為 base64 字符串
+function arrayBufferToBase64(buffer: ArrayBuffer) {
+  let binary = '';
+  const bytes = new Uint8Array(buffer);
+  const len = bytes.byteLength;
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return window.btoa(binary);
+}
+
+// 添加這個函數來將 PCM 數據轉換為 WAV
+function pcmToWav(pcmData: Int16Array, sampleRate: number): Blob {
+  const wavHeader = new ArrayBuffer(44);
+  const view = new DataView(wavHeader);
+
+  // RIFF chunk descriptor
+  writeString(view, 0, 'RIFF');
+  view.setUint32(4, 36 + pcmData.length * 2, true);
+  writeString(view, 8, 'WAVE');
+
+  // fmt sub-chunk
+  writeString(view, 12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+
+  // data sub-chunk
+  writeString(view, 36, 'data');
+  view.setUint32(40, pcmData.length * 2, true);
+
+  const wavFile = new Blob([wavHeader, pcmData.buffer], { type: 'audio/wav' });
+  return wavFile;
+}
+
+function writeString(view: DataView, offset: number, string: string) {
+  for (let i = 0; i < string.length; i++) {
+    view.setUint8(offset + i, string.charCodeAt(i));
+  }
 }
 
 export function ConsolePage() {
@@ -267,6 +312,9 @@ export function ConsolePage() {
     }
   }, [items]);
 
+  // 添加一個新的 ref 來存儲創建的 URL
+  const audioUrlsRef = useRef<{ [key: string]: string }>({});
+
   /**
    * Core RealtimeClient and audio capture setup
    * Set all of our instructions, tools, events and more
@@ -346,9 +394,28 @@ export function ConsolePage() {
         wavStreamPlayer.add16BitPCM(delta.audio, item.id);
       }
       if (item.status === 'completed' && item.formatted.audio?.length) {
-        const blob = new Blob([item.formatted.audio], { type: 'audio/mp3' });
-        const url = URL.createObjectURL(blob);
-        item.formatted.file = { url };
+        console.log('Received audio data:', item.formatted.audio.length, 'bytes');
+        
+        // 將接收到的音頻數據轉換為 Int16Array
+        const pcmData = new Int16Array(item.formatted.audio.buffer);
+        
+        // 將 PCM 數據轉換為 WAV
+        const wavBlob = pcmToWav(pcmData, 24000); // 假設採樣率為 24000
+        
+        const audioSrc = URL.createObjectURL(wavBlob);
+        
+        item.formatted.file = { url: audioSrc };
+        console.log('Created audio WAV URL');
+        
+        // 嘗試預加載音頻
+        const audio = new Audio(audioSrc);
+        audio.addEventListener('canplaythrough', () => {
+          console.log('Audio can play through');
+        });
+        audio.addEventListener('error', (e) => {
+          console.error('Audio preload error:', e);
+        });
+        audio.load();
       }
       setItems(items);
     });
@@ -363,6 +430,9 @@ export function ConsolePage() {
     setItems(client.conversation.getItems());
 
     return () => {
+      // 清理：撤銷所有創建的 URL
+      Object.values(audioUrlsRef.current).forEach(URL.revokeObjectURL);
+      audioUrlsRef.current = {};
       // cleanup; resets to defaults
       client.reset();
     };
@@ -465,6 +535,14 @@ export function ConsolePage() {
                         <audio
                           src={conversationItem.formatted.file.url}
                           controls
+                          onError={(e) => {
+                            console.error('Audio playback error:', e);
+                            const audioElement = e.target as HTMLAudioElement;
+                            console.log('Audio error code:', audioElement.error?.code);
+                            console.log('Audio error message:', audioElement.error?.message);
+                          }}
+                          onLoadedMetadata={() => console.log('Audio metadata loaded')}
+                          onCanPlay={() => console.log('Audio can play')}
                         />
                       )}
                     </div>
