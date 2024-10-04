@@ -106,6 +106,7 @@ function writeString(view: DataView, offset: number, string: string) {
 const SYSTEM_INSTRUCTIONS = {
   demo: instructions, // 使用之前定義的默認指令
   chinese: "把我輸入的內容，用中文念出來。不需要對話模式，每一句話都是單句朗讀。",
+  cantonese: "把我輸入的內容，用粵語念出來。不需要對話模式，每一句話都是單句朗讀。",
   japanese: "把我輸入的內容，用日文念出來。不需要對話模式，每一句話都是單句朗讀。",
   english: "把我輸入的內容，用美式英語念出來。不需要對話模式，每一句話都是單句朗讀。",
 };
