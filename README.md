@@ -7,7 +7,8 @@ that acts as a **Reference Client** (for browser and Node.js) and
 [`/src/lib/wavtools`](./src/lib/wavtools) which allows for simple audio
 management in the browser.
 
-<img src="/readme/realtime-console-demo.png" width="800" />
+![image](https://github.com/user-attachments/assets/f187f29e-b2a3-48ca-a7e7-54f371a51139)
+
 
 # Starting the console
 
