@@ -124,6 +124,11 @@ export function ConsolePage() {
   const [inputText, setInputText] = useState('');
 
   /**
+   * Added state variable for system instruction
+   */
+  const [systemInstruction, setSystemInstruction] = useState(instructions);
+
+  /**
    * Utility for formatting the timing of logs
    */
   const formatTime = useCallback((timestamp: string) => {
@@ -272,7 +277,7 @@ export function ConsolePage() {
     const wavStreamPlayer = wavStreamPlayerRef.current;
 
     // Set instructions
-    client.updateSession({ instructions: instructions });
+    client.updateSession({ instructions: systemInstruction });
     // Set transcription, otherwise we don't get user transcriptions back
     client.updateSession({ input_audio_transcription: { model: 'whisper-1' } });
 
@@ -361,7 +366,15 @@ export function ConsolePage() {
       // cleanup; resets to defaults
       client.reset();
     };
-  }, []);
+  }, [systemInstruction]);
+
+  /**
+   * Update system instruction
+   */
+  const updateSystemInstruction = useCallback(() => {
+    const client = clientRef.current;
+    client.updateSession({ instructions: systemInstruction });
+  }, [systemInstruction]);
 
   /**
    * Render the application
@@ -462,30 +475,19 @@ export function ConsolePage() {
           </div>
         </div>
         <div className="content-right">
-          <div className="content-block map">
-            <div className="content-block-title">get_weather()</div>
-            <div className="content-block-title bottom">
-              {marker?.location || 'not yet retrieved'}
-              {!!marker?.temperature && (
-                <>
-                  <br />
-                  🌡️ {marker.temperature.value} {marker.temperature.units}
-                </>
-              )}
-              {!!marker?.wind_speed && (
-                <>
-                  {' '}
-                  🍃 {marker.wind_speed.value} {marker.wind_speed.units}
-                </>
-              )}
-            </div>
-            <div className="content-block-body full">
-              {coords && (
-                <Map
-                  center={[coords.lat, coords.lng]}
-                  location={coords.location}
-                />
-              )}
+          <div className="content-block system-instruction">
+            <div className="content-block-title">System Instruction</div>
+            <div className="content-block-body">
+              <textarea
+                value={systemInstruction}
+                onChange={(e) => setSystemInstruction(e.target.value)}
+                placeholder="Enter system instruction here..."
+              />
+              <Button
+                label="Update"
+                onClick={updateSystemInstruction}
+                disabled={!isConnected}
+              />
             </div>
           </div>
           <div className="content-block debug-console">

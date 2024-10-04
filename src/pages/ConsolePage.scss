@@ -100,6 +100,29 @@
           margin-top: 56px;
         }
       }
+      .content-block.system-instruction {
+        .content-block-body {
+          display: flex;
+          flex-direction: column;
+          padding: 16px;
+          height: 250px;
+
+          textarea {
+            flex: 1;
+            resize: none;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 8px;
+            font-family: inherit;
+            font-size: inherit;
+            margin-bottom: 8px;
+          }
+
+          button {
+            align-self: flex-end;
+          }
+        }
+      }
     }
   }
 
