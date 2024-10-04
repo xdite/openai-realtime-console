@@ -101,25 +101,29 @@
         }
       }
       .content-block.system-instruction {
+        .content-block-title {
+          position: static;  // 改為靜態定位
+          background-color: transparent;  // 移除背景色
+          padding: 0;  // 移除內邊距
+          margin-bottom: 10px;  // 保持與輸入框的間距
+        }
+
         .content-block-body {
           display: flex;
           flex-direction: column;
-          padding: 16px;
-          height: 250px;
+          gap: 10px;
 
           textarea {
-            flex: 1;
-            resize: none;
+            width: 100%;
+            min-height: 100px;
+            padding: 8px;
             border: 1px solid #ccc;
             border-radius: 4px;
-            padding: 8px;
-            font-family: inherit;
-            font-size: inherit;
-            margin-bottom: 8px;
+            resize: vertical;
           }
 
           button {
-            align-self: flex-end;
+            align-self: flex-start;
           }
         }
       }
