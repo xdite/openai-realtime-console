@@ -211,7 +211,7 @@ export function ConsolePage() {
    * Send text message
    */
   const sendTextMessage = useCallback(() => {
-    if (!inputText.trim()) return;
+    if (!inputText.trim() || !isConnected) return;
 
     const client = clientRef.current;
     client.sendUserMessageContent([
@@ -221,7 +221,7 @@ export function ConsolePage() {
       },
     ]);
     setInputText('');
-  }, [inputText]);
+  }, [inputText, isConnected]);
 
   /**
    * Switch between Manual <> VAD mode for communication
@@ -534,6 +534,12 @@ export function ConsolePage() {
             type="text"
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
+            onKeyPress={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                sendTextMessage();
+              }
+            }}
             placeholder="Type your message..."
             disabled={!isConnected}
           />
